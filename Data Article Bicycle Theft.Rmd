@@ -1,0 +1,449 @@
+---
+output: pdf_document
+fontsize: 11pt
+mainfont: Times New Roman 
+spacing: 1.15
+header-includes:
+  - \pagenumbering{gobble}
+---
+
+
+\begingroup
+\fontfamily{pag}\fontsize{23}{23}\selectfont
+**Breaking into Bicycle Thefts** 
+\endgroup
+
+\begingroup
+\fontfamily{pag}\fontsize{14}{14}\selectfont
+insights from Toronto, Canada
+\endgroup
+
+\hfill Tharani Wijeyratnam
+&nbsp;
+
+&nbsp;
+
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*Introduction*
+\endgroup
+
+
+Toronto’s biking culture has been on a steady increase over the past few years, as the years go on, more on more people are looking towards more sustainable ways of travel. However, between the years of 2014 and 2019, the city of Toronto reported over 21 thousand bike theft incidents. The current bike safety measures imposed by the city seem to be insufficient in keeping bike owners’ bikes safe.
+
+Our analysis aims to find out how these measures should be changed and implemented to adequately cater to the populations that experience the greatest number of bike thefts annually.
+
+Analyzing various aspects of bike thefts in the city allows us to gain a deeper understanding of where and when security needs to be increased. Additionally, aiming to find out which bikes are more likely to be stolen will also be helpful insight to help curb bike thefts.
+
+Looking at the data collected from the Toronto Police Service Public Safety Data Portal we noticed that 10 neighbourhoods contributed to almost 50% of the bike thefts among the 140 classified neighbourhoods in Toronto. We will focus on these 10 neighbourhoods between the years of 2014 and 2019 to gain deeper insights into these thefts regarding when they occur and what factors may make bikes in these areas more prone to theft.
+
+&nbsp;
+
+\newpage
+
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*Which areas are more at risk for bike thefts?*
+\endgroup
+
+
+```{r, echo=F, warning = F, include=F}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(tidyverse)
+library(ggpubr)
+library(forcats)
+
+
+# Load data and metadata
+bike <- read.csv("bicycle-thefts-2014-2019.csv")
+meta <- read.csv("Bicycle_Thefts_Metadata.csv")
+
+# Confirms there is no missing data
+bike %>%
+  sapply(function(x) sum(is.na(x)))
+
+find_top_neighbourhoods <- as.data.frame(table(bike$Neighbourhood))
+# Arranges bike thefts in most to least frequent neighbourhoods
+find_top_neighbourhoods[order(find_top_neighbourhoods$Freq, decreasing = TRUE),]
+z <- find_top_neighbourhoods[order(find_top_neighbourhoods$Freq, decreasing = TRUE),]
+# Makes up 49% of total bike thefts
+sum(z$Freq[1:10]) / sum(z$Freq) * 100 
+
+# Identifies top 10 neighbourhoods for bike theft
+top10 <- bike %>%
+  group_by(Neighbourhood) %>%
+  summarise(NumObs = n()) %>%
+  arrange(desc(NumObs)) %>%
+  head(10)
+
+
+ 
+```
+
+
+```{r, echo=F, warning = F, fig.align="center", fig.dim=c(9, 5)}
+
+# Identifies top 10 neighbourhoods for bike theft as a list
+top10list <- c("Waterfront Communities-The Island (77)", "Bay Street Corridor (76)", "Church-Yonge Corridor (75)", 
+           "Niagra (82)", "Annex (95)", "Kensington-Chinatown (78)", 
+           "Moss Park (73)", "University (79)", "South Riverdale (70)", 
+           "Dovercourt-Wallace Emerson-Junction (93)")
+ 
+top10neighbourhoods <- top10 %>%
+  ggplot(aes(x = NumObs, y = reorder(Neighbourhood, NumObs))) +
+  geom_bar(stat = "identity", fill = "#A569BD", width = .65) +
+  theme_light() + 
+  geom_text(aes(label = NumObs), size = 3, position = position_dodge(width = 0.8), hjust = -0.2) +
+  xlim(0, 2500) +
+  xlab("NUMBER OF INCIDENTS") + 
+  ylab("NEIGHBOURHOOD") +
+  ggtitle("TOP 10 TORONTO NEIGHBOURHOODS RANKED BY\nTHE NUMBER OF REPORTED BIKE THEFT INCIDENTS")+
+  theme_light()+
+  theme(plot.title = element_text(size = 13, face = "bold"),
+    axis.text = element_text(size = 8),
+    panel.grid.minor = element_blank())
+
+top10neighbourhoods
+```
+
+
+
+Here we have the 10 neighbourhoods that had the greatest number of reported bike theft incidents.  In the number one spot, we have Waterfront Communities-The Island, followed by Bay Street Corridor and Church-Young Corridor. Looking at the map provided we can see the listed neighbourhoods are all centrally located in the downtown core. Furthermore, the Waterfront Communities in particular spans a larger area which may account for the high count. Considering that downtown is densely populated, and people often prefer traveling via foot, bike, or public transit, it makes sense to see these neighbourhoods account for the majority of thefts that happen in the city. 
+
+![Toronto Neighbourhooods by Number](hoodmap.png){width=500px}
+
+
+So where within these neighbourhoods do bikes get stolen?
+
+```{r, echo = F, warning = F, message = F, fig.dim=c(12, 9)}
+data <- read.csv("bicycle-thefts-2014-2019.csv")
+
+tempdata1 <- data %>% filter(Neighbourhood %in% c('Waterfront Communities-The Island (77)', 'Bay Street Corridor (76)', 'Church-Yonge Corridor (75)', 'Niagara (82)', 'Annex (95)', 'Kensington-Chinatown (78)', 'Moss Park (73)', 'University (79)', 'South Riverdale (70)', 'Dovercourt-Wallace Emerson-Junction (93)'))
+
+new2 <- tempdata1 %>%
+  group_by(Neighbourhood, Premise_Type) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+
+
+x_label = c('Annex','Bay \nStreet \nCorridor', 'Church-\nYonge\n Corridor',  'Dovercourt-\nWallace \nEmerson-\nJunction', 'Kensington-\nChinatown', 'Moss Park', 'Niagara', 'South \nRiverdale', 'University', 'Waterfront \nCommunities-\nThe Island')
+
+ggplot(new2, 
+       aes(x = factor(Neighbourhood),
+           y = pct,
+           fill = factor(Premise_Type))) + 
+  geom_bar(stat = "identity",
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0, 1, .2), labels = c("0.0" = "0%",
+  "0.2" = "20%",
+  "0.4" = "40%",
+  "0.6" = "60%",
+  "0.8" = "80%",
+  "1.0" = "100%")) +
+  geom_text(aes(label = lbl), 
+            size = 3, 
+            position = position_stack(vjust = 0.5)) + 
+theme_light() + 
+scale_x_discrete(label = x_label) +
+  scale_fill_manual(values=c('#FFEE58', '#42A5F5', '#66BB6A','#7E57C2', '#EC407A'))+
+  labs(fill = "PREMISE TYPE",
+       x = 'NEIGHBOURHOOD',
+       y = '',
+       subtitle = "IN THE TOP 10 NEIGHBOURHOODS",
+       caption = "note: sector for Apartment in Bay Street\nCorridor is miniscule but present")+
+  ggtitle("PROPORTION OF BIKE THEFTS INCIDENTS BY PREMISE")+
+  theme(plot.title = element_text(size = 15, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        panel.grid.minor = element_blank(),
+        axis.title = element_text(size = 12),
+        plot.caption = element_text(size = 12))
+
+```
+
+
+For the most part, it is observed that 20-50% of bikes were stolen from outside premises, this includes streets, parking lots, and other open areas. When looking at the University neighbourhood, it displays that bikes are mostly stolen from other premise types, however, when taking a deeper look into the data it is noted that the other premise types include the campuses of colleges and universities within the neighbourhood. 
+
+There is no apparent pattern seen in the bike thefts for these neighbourhoods, the variability in the proportions of each premise type is due to the geography of each neighbourhood. For example, Bay Street Corridor is located in the downtown core, meaning there are a lot of educational institutions, government institutions, and businesses but not a lot of houses, hence why the proportion of bikes that are stolen from houses is extremely low. Similarly, if we look at the geography of Dovercourt-Wallace it is located away from downtown and encompasses more residential areas with houses, again accounting for the higher proportion of bikes stolen from houses. 
+\newpage
+
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*When do bike thefts normally occur?*
+\endgroup
+
+
+```{r, echo = F, warning = F, message = F, fig.dim=c(8,5)}
+monthByYearGraph <- bike %>% 
+  filter(Neighbourhood %in% top10list) %>%
+  ggplot(aes(x = as.character(Occurrence_Month), colour = as.character(Occurrence_Year))) +
+  geom_point(stat = "count", group = 1) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"),
+                   labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+  geom_line(aes(group = Occurrence_Year), stat = "count")+
+  scale_colour_manual(values=c('#EF5350', '#FFCA28', '#9CCC65','#42A5F5', '#7E57C2', '#EC407A'))+
+  xlab("MONTHS") + 
+  ylab("NUMBER OF INCIDENTS") +
+  labs(colour = "YEAR") +
+  labs(subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  ggtitle("YEARLY & MONTHLY TRENDS OF BIKE THEFT INCIDENTS")+
+  theme_light()+
+  theme(plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.text = element_text(size = 8))
+  
+monthByYearGraph
+
+```
+
+
+
+In general, bike thefts seem to peak during the Summer months in Toronto, as this is the time of year that people tend to use their bikes the most. The availability of bikes to steal are increased, thus the proportion of bikes stolen also mimics that pattern.
+
+Comparing yearly trends, 2018 consistently remained in the top three 3 years for the number of incidents that occurred. Generally speaking, the number of bike theft incidents in these neighbourhoods have increased each year. Nevertheless, we observe a sudden surge of bike thefts in the year 2014 for the month of June, which contradicts the steady increase of bike thefts over the years. 
+
+Let’s take a deeper look into these months to pinpoint when these bike thefts occur.
+
+
+```{r, echo = F, warning = F, fig.dim=c(10, 7), fig.align="center"}
+bike$Time <- substr(bike$Occurrence_Time, 12,13)
+bike$Time <- as.numeric(as.character(bike$Time))
+
+bike$TimeGroup <- ifelse(bike$Time >= 0 & bike$Time <= 3 , "midnight-3am",
+                      ifelse(bike$Time > 3 & bike$Time <= 6 , "3-6am",
+                             ifelse(bike$Time > 6 & bike$Time <= 9  , "6-9am",
+                                    ifelse(bike$Time > 9 & bike$Time <= 12 , "9-noon",
+                                           ifelse(bike$Time > 12 & bike$Time <= 15 , "noon-3pm",
+                                                  ifelse(bike$Time > 15 & bike$Time <= 18 , "3-6pm",
+                                                         ifelse(bike$Time > 18 & bike$Time <= 21 , "6-9pm",
+                                                                ifelse(bike$Time > 21 & bike$Time <= 24 , "9pm-midnight", "55"))))))))
+                                                                       
+                                           
+month_names <- list("1" = "J A N U A R Y",
+                    "2" = "F E B R U A R Y",
+                    "3" = "M A R C H",
+                    "4" = "A P R I L",
+                    "5" = "M A Y",
+                    "6" = "J U N E",
+                    "7" = "J U L Y",
+                    "8" = "A U G U S T",
+                    "9" = "S E P T E M B E R",
+                    "10" = "O C T O B E R",
+                    "11" = "N O V E M B E R",
+                    "12" = "D E C E M B E R")
+
+month_labeller <- function(variable, value){
+  return(month_names[value])
+}
+
+TimeGraphSummer <- bike %>% 
+  filter(Neighbourhood %in% top10list) %>%
+  filter(Occurrence_Month %in% c("5", "6", "7", "8", "9", "10")) %>% 
+  ggplot(aes(x = as.character(TimeGroup), stat="bin")) +
+  geom_bar(fill = "#EF5350") +
+  facet_wrap(~factor(as.character(Occurrence_Month), levels=c('1','2','3','4', "5", "6", "7", "8", "9", "10", "11", "12")), ncol = 2, labeller = month_labeller) +
+  scale_x_discrete(limits = c("midnight-3am", "3-6am", "6-9am", "9-noon", "noon-3pm", "3-6pm", "6-9pm", "9pm-midnight"), labels = c("midnight\nto\n3am", "3am\nto\n6am", "6am\nto\n9am", "9am\nto\nnoon", "noon\nto\n3pm", "3pm\nto\n6pm", "6pm\nto\n9pm", "9pm\nto\nmidnight")) +
+  xlab("TIME OF DAY") +
+  ylab("NUMBER OF INCIDENTS")+
+  ggtitle("HOURLY BIKE THEFT DURING WARMER MONTHS")+
+  labs(subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        plot.title = element_text(size = 15, face = "bold"),
+        axis.text = element_text(size = 8))
+  
+TimeGraphSummer
+
+  #theme(strip.background = element_rect(colour="black", fill="yellow")) + 
+
+```
+
+
+Here we have categorized the months from May to October as warmer months of the year. Bike thieves tend to be active throughout the day, with higher risk times starting from noon to 3pm, and from there, incidents slowly descend but then peak between the hours of midnight and 3am. Bike thefts are less prevalent during typical sleeping hours of the day. This is a relatively simple pattern to interpret as there is more availability of bikes throughout the daytime during office/school hours. The peak rates late at night presumably stem from the fact that bike thieves are less likely to get caught stealing when it is dark out and when there are generally fewer witnesses around.
+
+```{r, echo = F, warning = F, fig.dim=c(10, 7)}
+TimeGraphWinter <- bike %>% 
+  filter(Neighbourhood %in% top10list) %>%
+  filter(Occurrence_Month %in% c("1", "2", "3", "4", "11", "12")) %>% 
+  ggplot(aes(x = as.character(TimeGroup), stat="bin")) +
+  geom_bar(fill = "#42A5F5") +
+  facet_wrap(~factor(as.character(Occurrence_Month), levels=c('1','2','3','4', "5", "6", "7", "8", "9", "10", "11", "12")), ncol = 2, labeller = month_labeller)+
+  scale_x_discrete(limits = c("midnight-3am", "3-6am", "6-9am", "9-noon", "noon-3pm", "3-6pm", "6-9pm", "9pm-midnight"), labels = c("midnight\nto\n3am", "3am\nto\n6am", "6am\nto\n9am", "9am\nto\nnoon", "noon\nto\n3pm", "3pm\nto\n6pm", "6pm\nto\n9pm", "9pm\nto\nmidnight")) +
+  #theme(strip.background = element_rect(colour="black", fill="yellow")) + 
+  xlab("TIME OF DAY") +
+  ylab("NUMBER OF INCIDENTS")+
+  ggtitle("HOURLY BIKE THEFT DURING COLDER MONTHS")+
+  labs(subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        plot.title = element_text(size = 15, face = "bold"),
+        axis.text = element_text(size = 8))
+
+
+TimeGraphWinter
+
+```
+
+
+The volume of thefts significantly reduces in the colder months as indicated previously. Yet, the time of day that bike thefts take place and the patterns we saw in the warmer months relatively take place during the same hours. Note that since April and November border the previously categorized warmer months, the number of incidents are little higher when compared to the other colder months.
+
+
+```{r, echo = F, warning = F, fig.dim=c(12, 10)}
+TimeGraphYear <- bike %>% 
+  filter(Neighbourhood %in% top10list) %>%
+  ggplot(aes(x = as.character(TimeGroup), fill = as.character(Occurrence_Month)), stat="bin") +
+  geom_bar(show.legend = F) +
+  facet_wrap(~factor(as.character(Occurrence_Month), levels=c('1','2','3','4', "5", "6", "7", "8", "9", "10", "11", "12")), ncol = 3, labeller = month_labeller)+
+  scale_x_discrete(limits = c("midnight-3am", "3-6am", "6-9am", "9-noon", "noon-3pm", "3-6pm", "6-9pm", "9pm-midnight"), labels = c("midnight\nto\n3am", "3am\nto\n6am", "6am\nto\n9am", "9am\nto\nnoon", "noon\nto\n3pm", "3pm\nto\n6pm", "6pm\nto\n9pm", "9pm\nto\nmidnight")) +
+    scale_fill_manual(values = c("#42A5F5", "#EF5350", "#42A5F5", "#42A5F5", "#42A5F5", "#42A5F5", "#42A5F5", "#EF5350", "#EF5350", "#EF5350", "#EF5350", "#EF5350")) +
+  #theme(strip.background = element_rect(colour="black", fill="yellow")) + 
+  xlab("TIME OF DAY") +
+  ylab("NUMBER OF INCIDENTS")+
+  ggtitle("HOURLY BIKE THEFTS THROUGHOUT THE YEAR")+
+  labs(subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        plot.title = element_text(size = 15, face = "bold"),
+        axis.text = element_text(size = 8))
+
+TimeGraphYear
+```
+
+It is interesting to see these visualizations combined as it reconfirms that bike thefts occur more often during the warmer months of the year and that the pattern of bike thefts by the hour are mostly consistent for each month.
+
+&nbsp;
+\newpage
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*Do bike features play a role in thefts?*
+\endgroup
+
+So what type of bikes are targeted the most? Do certain bike features or bike types make them more prone to theft?
+
+```{r, echo = F, warning = F, message = F, fig.dim=c(10, 8), fig.align="center"}
+
+newdata1 <- data %>% filter(Neighbourhood %in% c('Waterfront Communities-The Island (77)', 'Bay Street Corridor (76)', 'Church-Yonge Corridor (75)', 'Niagara (82)', 'Annex (95)', 'Kensington-Chinatown (78)', 'Moss Park (73)', 'University (79)', 'South Riverdale (70)', 'Dovercourt-Wallace Emerson-Junction (93)'), Bike_Colour %in% c('BLK   ', 'BLU   ', 'GRY   ', 'WHI   ', 'RED   ', 'SIL   ', 'GRN   ', 'ONG   ', 'PLE   ', 'DBL   ')) 
+
+
+newdata2 <- newdata1 %>%
+  group_by(Neighbourhood, Bike_Colour) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+
+
+
+x_label = c('Annex','Bay \nStreet \nCorridor', 'Church-\nYonge\n Corridor',  'Dovercourt-\nWallace \nEmerson-\nJunction', 'Kensington-\nChinatown', 'Moss Park', 'Niagara', 'South \nRiverdale', 'University', 'Waterfront \nCommunities-\nThe Island')
+
+ggplot(newdata2, 
+       aes(x = factor(Neighbourhood),
+           y = pct,
+           fill = factor(Bike_Colour))) + 
+  geom_bar(stat = "identity",
+           position = "fill", 
+           colour = "black") +
+  scale_fill_manual(values=c('gray26', '#29B6F6', '#5C6BC0','#9CCC65', '#78909C', '#FF7043', '#AB47BC', '#EF5350', '#BDBDBD', 'white'), labels=c('black', 'blue', 'dark blue','green', 'grey', 'orange', 'purple', 'red', 'silver', 'white')) + 
+    scale_y_continuous(breaks = seq(0, 1, .2), labels = c("0.0" = "0%",
+  "0.2" = "20%",
+  "0.4" = "40%",
+  "0.6" = "60%",
+  "0.8" = "80%",
+  "1.0" = "100%")) +
+  geom_text(aes(label = lbl), 
+            size = 3, 
+            position = position_stack(vjust = 0.5)) + 
+theme_light() + 
+scale_x_discrete(labels = x_label) + 
+  labs(fill = "BIKE COLOUR",
+       x = 'TOP 10 NEIGHBOURHOODS',
+       y = '',
+       subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  ggtitle("PROPORTION OF BIKE THEFTS INCIDENTS BY COLOUR TYPE")+
+  theme(panel.grid.major = element_blank(),
+        plot.title = element_text(size = 15, face = "bold"),
+        axis.text = element_text(size = 8),
+        plot.subtitle = element_text(size = 10))
+
+
+```
+
+We focused on the 10 most popular colour choices of bikes and observed the proportion of each colour stolen among our top 10 neighbourhoods. It is apparent that black coloured bikes are stolen the most, regardless of the neighbourhood. Nonetheless, we can not say that because of this observation that black bikes are explicitly targeted more often. 
+
+Rather, since black-coloured bikes are usually a popular choice by bike owners, the high rates of thefts likely have to do with the availability of bikes in said colour. Meaning that since black bikes are more prevalent in these neighbourhoods, their theft rates are then relatively proportionate to that. Equivalently, the likely reason that the proportion of bike thefts for each colour are almost identical is again, due to their availability. We can even consider that the manufacturers of bikes produce coloured bikes in similar proportions. Blue, grey, red, and white bikes also have a high proportion of counts. 
+
+
+
+
+```{r, echo = F, warning = F, message = F, fig.dim=c(10, 6)}
+
+
+tempdata2 <- data %>% filter(Neighbourhood %in% c('Waterfront Communities-The Island (77)', 'Bay Street Corridor (76)', 'Church-Yonge Corridor (75)', 'Niagara (82)', 'Annex (95)', 'Kensington-Chinatown (78)', 'Moss Park (73)', 'University (79)', 'South Riverdale (70)', 'Dovercourt-Wallace Emerson-Junction (93)'), Bike_Type %in% c("MT", "RG", "SC", "EL", "RC", "TO", "BM", "FO", "TA", "TR" ,"RE" ,"UN"))
+
+newdata4 <- tempdata2 %>%
+  group_by(Neighbourhood, Bike_Type) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+
+
+library(ggpubr)
+ggballoonplot(newdata4, fill = "value") + 
+  ggtitle("Pretty title") + 
+  theme(axis.title.x = element_text(),
+        axis.title.y = element_text()) + 
+  xlab("Top 10 neighbourhood") + 
+  scale_fill_viridis_c(option = "C") + 
+  scale_x_discrete(labels= c('Annex','Bay \nStreet \nCorridor', 'Church-\nYonge\n Corridor',  'Dovercourt-\nWallace \nEmerson-\nJunction', 'Kensington-\nChinatown', 'Moss Park', 'Niagara', 'South \nRiverdale', 'University', 'Waterfront \nCommunities-\nThe Island')) + 
+  scale_y_discrete(labels = c('Unicycle', 'Tricycle', 'Touring', 'Tandem', 'Scooter', 'Regular', 'Recumbant', 'Racer', 'Mountain', 'Folding', 'Electric',
+                              'BMX'
+)) + 
+  #geom_text(size = 3)+
+  labs(fill = "COUNT",
+       x = "TOP 10 NEIGHBOURHOODS",
+       y = "BIKE TYPE",
+       size = "COUNT",
+       subtitle = "IN THE TOP 10 NEIGHBOURHOODS")+
+  ggtitle("BIKE THEFT INCIDENTS BY BIKE TYPE")+
+  theme_light()+
+  theme(plot.title = element_text(size = 15, face = "bold"),
+        axis.title = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_text(size = 8))
+
+
+```
+This balloon plot style graph allows us to easily read and compare the count of the type of bikes that were involved in bike thefts. The higher the concentration indicates more thefts of that bike type. 
+
+Among all these neighbourhoods, the distribution of bike types stolen spans more or so evenly. The exception being Waterfront Communities, Bay Street Corridor, Church-Young Corridor, and the Annex. Where in these specified neighbourhoods, there is a higher proportion of thefts for regular bikes, mountain bikes, and racer bikes. Recognizing that these 3 bike types also slightly stand out more among the rest of the neighbourhoods too. However, we have a similar situation as before as we can not explicitly say that these bike types are targeted the most in these neighbourhoods. Instead, due to these bike types being popular choices to own, their concentration of bike thefts imitates that. 
+
+Both these visualizations not only show the proportions of bike colours or bike types targeted, but in some ways also show which bike colours and types are simply just more prevalent in these neighbourhoods, thus making them have higher counts of thefts associated with them.
+
+&nbsp;
+
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*CONCLUSION*
+\endgroup
+
+
+The insight from this analysis helps us understand where our priorities need to be in terms of instilling better measures and security to curb the number of bike thefts in the city. We understand that neighbourhoods that are located in the downtown core have a larger proportion of bikes within them and this  to the high number of bike thefts seen in these areas. We suggest increasing surveillance in these neighbourhoods as many incidents occur here. Regarding premise type, we notice that bikes are stolen the most when they are left outside, rather than at houses and apartments. Alerting bike owners to be more secure and to take extra precautions when leaving their bikes outside can aid in the reduction of bike thefts. 
+Furthermore, we recognize that bike theft incidents increase drastically during the warmer months of the year when the usage of bikes is more prevalent. Additionally, we observe that no matter the month of the year, hourly theft patterns remain relatively the same. We can especially emphasize needing security in the few hours after midnight when bike thieves suspect they are less likely to get caught due to it being dark outside and having fewer people around them. 
+When looking at our visualizations for bike features, it is difficult to differentiate between bike thefts targeting the highlighted colours and highlighted types versus there simply being a higher proportion of those bikes available for bike thieves.
+All-in-all, if we pay more attention to neighbourhoods that have higher bike theft incidents we can significantly reduce the number of overall bike theft incidents in Toronto
+
+&nbsp;
+
+\begingroup
+\fontfamily{pag}\fontsize{15}{15}\selectfont
+*CITATIONS*
+\endgroup
+
+Toronto Neighbourhood Map. UReach Toronto. (n.d.). Retrieved from https://www.ureachtoronto.ca/toronto-neighbourhood-map/ 
