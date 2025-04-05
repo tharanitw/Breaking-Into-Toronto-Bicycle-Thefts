@@ -18,7 +18,7 @@ header-includes:
 insights from Toronto, Canada
 \endgroup
 
-\hfill Fariha Oishi & Tharani Wijeyratnam
+\hfill Tharani Wijeyratnam
 &nbsp;
 
 &nbsp;
