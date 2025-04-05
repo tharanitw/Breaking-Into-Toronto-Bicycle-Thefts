@@ -1,6 +1,6 @@
 # Breaking-Into-Toronto-Bicycle-Thefts
 
-Introduction
+### Introduction
 Toronto’s biking culture has been growing steadily over the past few years, with more people opting for sustainable travel. However, between 2014 and 2019, over 21,000 bike thefts were reported in the city. The current bike safety measures appear insufficient in protecting bikes and their owners. This analysis aims to investigate how these measures could be improved to target the areas and populations most affected by bike thefts.
 
 By examining various aspects of bike theft in Toronto, we hope to better understand when and where security needs to be increased, and which types of bikes are more likely to be stolen. We focus on the 10 neighbourhoods that accounted for almost 50% of the reported bike thefts from 2014 to 2019.
